@@ -1,0 +1,37 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Restore dependencies
+      run: dotnet restore src/RoslynAsAServiceAPI/RoslynAsAServiceAPI.csproj
+      
+    - name: Build
+      run: dotnet build src/RoslynAsAServiceAPI/RoslynAsAServiceAPI.csproj --configuration Release --no-restore
+      
+    - name: Test
+      run: dotnet test src/RoslynAsAServiceAPI/RoslynAsAServiceAPI.csproj --configuration Release --no-build --verbosity normal
+      
+    - name: Publish
+      run: dotnet publish src/RoslynAsAServiceAPI/RoslynAsAServiceAPI.csproj --configuration Release --output ./publish
+      
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: ./publish
