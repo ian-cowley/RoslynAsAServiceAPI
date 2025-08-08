@@ -191,7 +191,10 @@ The API includes a simple HTML page at the root URL to verify the service is run
 
 ## n8n Integration
 
-This API is specifically designed to work with n8n workflows, enabling you to automate Visual Studio project manipulation tasks. Here's how to integrate it with n8n:
+This API is specifically designed to work with n8n workflows, enabling you to automate Visual Studio project manipulation tasks.
+
+![n8n Workflow Example](docs/images/n8n-example-workflow.png)
+*Example n8n workflow using RoslynAsAServiceAPI for automated code analysis*
 
 ### Setting up n8n Integration
 
