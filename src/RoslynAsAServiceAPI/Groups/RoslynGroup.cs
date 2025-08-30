@@ -24,13 +24,13 @@ public static class RoslynGroup
         actionGroup.MapPost("/replace-range", ReplaceRange);
     }
 
-    // --- Private Endpoint Handlers ---
+    // --- Public Endpoint Handlers ---
     /// <summary>
     /// Queries syntax nodes in a C# file with optional filtering by attribute and method name.
     /// </summary>
     /// <param name="query">The query parameters including file path, optional attribute filter, and optional method name filter.</param>
     /// <returns>A list of found nodes with their details, locations, and attributes.</returns>
-    private static async Task<IResult> QuerySyntaxNodes([FromBody] SyntaxNodeQuery query)
+    public static async Task<IResult> QuerySyntaxNodes([FromBody] SyntaxNodeQuery query)
     {
         if (!File.Exists(query.FilePath))
         {
@@ -88,7 +88,7 @@ public static class RoslynGroup
     /// </summary>
     /// <param name="command">The command containing file path, line range, and replacement text.</param>
     /// <returns>Success result if the operation completes successfully.</returns>
-    private static async Task<IResult> ReplaceRange([FromBody] ReplaceRangeCommand command)
+    public static async Task<IResult> ReplaceRange([FromBody] ReplaceRangeCommand command)
     {
         if (!File.Exists(command.FilePath))
         {
@@ -156,7 +156,7 @@ public static class RoslynGroup
     /// </summary>
     /// <param name="query">The query containing the root directory to search.</param>
     /// <returns>A list of full file paths.</returns>
-    private static Task<IResult> FindCSharpFiles([FromBody] FindCSharpFilesQuery query)
+    public static Task<IResult> FindCSharpFiles([FromBody] FindCSharpFilesQuery query)
     {
         if (!Directory.Exists(query.Path))
         {
@@ -167,7 +167,7 @@ public static class RoslynGroup
         {
             // Search for all .cs files in the directory and all subdirectories.
             var files = Directory.GetFiles(query.Path, "*.cs", SearchOption.AllDirectories).ToList();
-            
+
             return Task.FromResult(Results.Ok(new FindCSharpFilesResponse(files)));
         }
         catch (UnauthorizedAccessException ex)

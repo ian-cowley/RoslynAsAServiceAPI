@@ -1,141 +1,121 @@
 # RoslynAsAServiceAPI
 
-A RESTful web API that provides Roslyn (Microsoft's C# compiler platform) functionality as a service. This API allows you to analyze, query, and modify C# source code remotely using HTTP requests.
+A small RESTful web API that exposes selected Roslyn (Microsoft C# compiler platform) functionality and simple file operations as an HTTP service. It supports:
+- HTTP server mode (with OpenAPI/Swagger for exploration)
+- Command-line (CLI/headless) mode for running individual operations and piping results to scripts
 
-**Primary Use Case**: This project enables n8n workflows to access and manipulate your local Visual Studio project files, allowing you to automate code analysis, refactoring, and modification tasks through n8n's visual workflow interface.
+Primary use case: enable n8n workflows to access and manipulate local Visual Studio project files for automated code analysis, refactoring, and modification.
+
+## What’s new (recent additions)
+- CLI/Headless mode: call handlers directly from the command line (e.g., `query-syntax-nodes`, `find-csharp-files`, `replace-range`, and file-system commands) without starting the web server.
+- New file system endpoints: `/api/files/find`, `/api/files/replace-text`, `/api/files/insert-text`, `/api/files/create-file`.
+- Improved JSON DTOs: explicit request/response shapes for queries and file commands (see DTO reference below).
 
 ## Features
+- Code analysis: query syntax nodes, methods, and attributes in C# files
+- File discovery: find C# files in specified directories
+- Code modification: replace text ranges or insert/replace file text
+- Local file access: direct access to local Visual Studio project files
+- Security: API key authentication for all endpoints
+- OpenAPI/Swagger: interactive API exploration
+- n8n integration: endpoints designed for workflow automation
 
-- **Code Analysis**: Query syntax nodes, methods, and attributes in C# files
-- **File Discovery**: Find C# files in specified directories
-- **Code Modification**: Replace text ranges in source files
-- **Security**: API key authentication for all endpoints
-- **OpenAPI Integration**: Swagger documentation for easy testing and integration
-- **n8n Integration**: RESTful endpoints designed for seamless integration with n8n workflows
-- **Local File Access**: Direct access to your Visual Studio project files on the local machine
+## Technologies
+- .NET 9.0
+- ASP.NET Core minimal APIs
+- Microsoft.CodeAnalysis.CSharp (Roslyn)
+- Microsoft.CodeAnalysis.Workspaces.MSBuild
+- OpenAPI/Swagger
 
-## Technologies Used
-
-- **.NET 9.0**: Latest version of the .NET framework
-- **ASP.NET Core**: Web API framework
-- **Microsoft.CodeAnalysis.CSharp**: Roslyn compiler APIs for C# code analysis
-- **Microsoft.CodeAnalysis.Workspaces.MSBuild**: MSBuild workspace support
-- **OpenAPI/Swagger**: API documentation and testing interface
-
-## Getting Started
+## Getting started
 
 ### Prerequisites
-
 - .NET 9.0 SDK or later
 - Visual Studio 2022 or VS Code (optional)
 
-### Installation
+### Install and build
+1) Clone and open the project folder:
 
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd RoslynAsAServiceAPI
-   ```
-
-2. Navigate to the project directory:
-   ```bash
-   cd src/RoslynAsAServiceAPI
-   ```
-
-3. Restore dependencies:
-   ```bash
-   dotnet restore
-   ```
-
-4. Configure your API key in `appsettings.json`:
-   ```json
-   {
-     "ApiKey": "your-secret-api-key-here"
-   }
-   ```
-
-### Running the Application
-
-1. Build and run the application:
-   ```bash
-   dotnet run
-   ```
-
-2. The API will be available at:
-   - HTTP: `http://localhost:5000`
-   - HTTPS: `https://localhost:5001`
-
-3. Access the Swagger UI (in development mode):
-   - `https://localhost:5001/openapi`
-
-## API Endpoints
-
-All endpoints require an API key to be passed in the request headers:
-```
-X-API-Key: your-api-key
+```powershell
+git clone <repository-url>
+cd RoslynAsAServiceAPI/src/RoslynAsAServiceAPI
 ```
 
-### Query Operations (`/api/query`)
-
-#### POST `/api/query/syntax-nodes`
-Query syntax nodes in a C# file with optional filtering.
-
-**Request Body:**
-```json
-{
-  "filePath": "path/to/your/file.cs",
-  "withAttribute": "OptionalAttributeName",
-  "methodName": "OptionalMethodName"
-}
+2) Restore and build:
+```powershell
+dotnet restore
+dotnet build
 ```
 
-**Response:**
-Returns a list of found nodes with their details, locations, and attributes.
+### Run as a server
+Start the HTTP server (development mode shows OpenAPI UI):
 
-#### POST `/api/query/find-csharp-files`
-Find all C# files in a specified directory.
-
-**Request Body:**
-```json
-{
-  "path": "path/to/search/directory"
-}
+```powershell
+dotnet run
 ```
 
-**Response:**
-```json
-{
-  "files": ["file1.cs", "file2.cs", ...]
-}
+- OpenAPI UI (development): /openapi
+- Default dev URLs are printed on startup (e.g., http://localhost:5000 and https://localhost:5001)
+
+### Run a single command (CLI mode)
+Invoke handlers directly from the command line. Pass a command name and a single JSON payload argument.
+
+Examples (PowerShell-friendly quoting):
+```powershell
+# Query syntax nodes in a file
+dotnet run -- query-syntax-nodes '{"filePath":"C:\\path\\to\\MyFile.cs","withAttribute":null,"methodName":null}'
+
+# Find all C# files under a folder
+dotnet run -- find-csharp-files '{"path":"C:\\path\\to\\project"}'
+
+# Replace a range of lines in a file
+dotnet run -- replace-range '{"filePath":"C:\\path\\to\\MyFile.cs","startLine":10,"endLine":15,"newText":"// new\n// lines"}'
 ```
+CLI mode writes JSON or text to stdout and uses exit codes to indicate success (0) or failure (non‑zero).
 
-### Action Operations (`/api/actions`)
+## API reference (summary)
+Authentication: include header `X-API-Key: <your-key>` on every request.
 
-#### POST `/api/actions/replace-range`
-Replace a specific range of lines in a C# file.
+Group: /api/query
+- POST /api/query/syntax-nodes
+  - Body: SyntaxNodeQuery { filePath, withAttribute?, methodName? }
+  - Returns: FoundNode[] (file, node type, name, fullText, location, attributes)
 
-**Request Body:**
-```json
-{
-  "filePath": "path/to/your/file.cs",
-  "startLine": 10,
-  "endLine": 15,
-  "newText": "// New code content"
-}
-```
+- POST /api/query/find-csharp-files
+  - Body: FindCSharpFilesQuery { path }
+  - Returns: FindCSharpFilesResponse { files: string[] }
 
-## Configuration
+Group: /api/actions
+- POST /api/actions/replace-range
+  - Body: ReplaceRangeCommand { filePath, startLine, endLine, newText }
 
-### API Key Security
+Group: /api/files
+- POST /api/files/find
+  - Body: FindFilesQuery { path, extension }
+- POST /api/files/replace-text
+  - Body: ReplaceTextCommand { filePath, oldText, newText }
+- POST /api/files/insert-text
+  - Body: InsertTextCommand { filePath, lineNumber, textToInsert }
+- POST /api/files/create-file
+  - Body: CreateFileCommand { filePath, content }
 
-The API uses a simple API key authentication mechanism. Configure your API key in:
+## DTO / model reference
+- SyntaxNodeQuery(string FilePath, string? WithAttribute, string? MethodName)
+- ReplaceRangeCommand(string FilePath, int StartLine, int EndLine, string NewText)
+- FoundNode(string FilePath, string NodeType, string Name, string FullText, NodeLocation Location, List<string> Attributes)
+- NodeLocation(int StartLine, int EndLine)
+- FindCSharpFilesQuery(string Path)
+- FindCSharpFilesResponse(List<string> Files)
+- FindFilesQuery(string Path, string Extension)
+- ReplaceTextCommand(string FilePath, string OldText, string NewText)
+- InsertTextCommand(string FilePath, int LineNumber, string TextToInsert)
+- CreateFileCommand(string FilePath, string Content)
 
-- `appsettings.json` for development
-- `appsettings.Production.json` for production
-- Environment variables: `ApiKey`
+## Configuration & security
+- Configure API key in `appsettings.json` or via environment variable `ApiKey`.
+- Production: enable HTTPS and secure file system access. Validate file paths to prevent directory traversal.
 
-### Example Configuration
-
+Example configuration:
 ```json
 {
   "Logging": {
@@ -151,8 +131,7 @@ The API uses a simple API key authentication mechanism. Configure your API key i
 
 ## Development
 
-### Project Structure
-
+### Project structure
 ```
 src/
 ├── RoslynAsAServiceAPI/
@@ -169,14 +148,12 @@ src/
 │   └── RoslynAsAServiceAPI.csproj  # Project file
 ```
 
-### Adding New Endpoints
-
-1. Add your endpoint handler methods to `Groups/RoslynGroup.cs`
-2. Register the endpoint in the `MapRoslynApi` method
-3. Define any required DTOs in `ApiKeyEndpointFilter.cs` or create separate model files
+### Adding new endpoints
+1) Add handler methods to `Groups/RoslynGroup.cs`
+2) Register the endpoint in `MapRoslynApi`
+3) Define any required DTOs alongside existing ones or in a dedicated models file
 
 ### Building
-
 ```bash
 # Debug build
 dotnet build
@@ -186,37 +163,30 @@ dotnet build --configuration Release
 ```
 
 ### Testing
+- Simple HTML at root URL verifies the service is running
+- Use OpenAPI/Swagger or tools like Postman for comprehensive testing
 
-The API includes a simple HTML page at the root URL to verify the service is running. For comprehensive testing, use the OpenAPI/Swagger interface or tools like Postman.
-
-## n8n Integration
-
-This API is specifically designed to work with n8n workflows, enabling you to automate Visual Studio project manipulation tasks.
+## n8n integration
+This API is designed for n8n workflows to automate Visual Studio project manipulation tasks.
 
 ![n8n Workflow Example](docs/images/n8n-example-workflow.png)
-*Example n8n workflow using RoslynAsAServiceAPI for automated code analysis*
 
-### Setting up n8n Integration
+### Setup
+1) Start the API locally
+2) Configure n8n HTTP Request nodes to call endpoints
 
-1. **Start the API**: Ensure RoslynAsAServiceAPI is running locally
-2. **Configure n8n HTTP Request nodes**: Use the following settings in your n8n workflow:
-
-#### n8n HTTP Request Node Configuration
-
-**Basic Settings:**
-- **Method**: POST
-- **URL**: `http://localhost:5000/api/query/syntax-nodes` (or other endpoints)
-- **Authentication**: None (use headers instead)
-
-**Headers:**
+HTTP Request node basics:
+- Method: POST
+- URL: e.g., `http://localhost:5000/api/query/syntax-nodes`
+- Authentication: None (use headers)
+- Headers:
 ```json
 {
   "Content-Type": "application/json",
   "X-API-Key": "your-api-key-here"
 }
 ```
-
-**Body (for syntax-nodes endpoint):**
+- Body (example for syntax-nodes):
 ```json
 {
   "filePath": "C:\\path\\to\\your\\project\\file.cs",
@@ -225,79 +195,44 @@ This API is specifically designed to work with n8n workflows, enabling you to au
 }
 ```
 
-### Common n8n Workflow Scenarios
+Common scenarios:
+- Code analysis workflow: query syntax nodes in multiple files and analyze results
+- Automated refactoring: find patterns and replace outdated code
+- Code quality monitoring: scan for attributes/patterns and notify on issues
 
-1. **Code Analysis Workflow**:
-   - Trigger: Schedule or webhook
-   - Action: Query syntax nodes in multiple files
-   - Process: Analyze results and generate reports
+Example workflow steps:
+1) HTTP Request: `/api/query/find-csharp-files`
+2) Function: process file list
+3) HTTP Request (per file): `/api/query/syntax-nodes`
+4) Function: analyze syntax data
+5) Email/Slack: send results/notifications
 
-2. **Automated Refactoring**:
-   - Trigger: Git commit or file change
-   - Action: Find specific code patterns
-   - Process: Replace outdated patterns with new implementations
-
-3. **Code Quality Monitoring**:
-   - Trigger: Daily schedule
-   - Action: Scan project files for specific attributes or patterns
-   - Process: Send notifications if issues are found
-
-### Example n8n Workflow Steps
-
-1. **HTTP Request Node**: Call `/api/query/find-csharp-files` to get all C# files
-2. **Function Node**: Process the file list
-3. **HTTP Request Node**: For each file, call `/api/query/syntax-nodes`
-4. **Function Node**: Analyze the syntax data
-5. **Email/Slack Node**: Send results or notifications
-
-### Best Practices for n8n Integration
-
-- **Error Handling**: Use n8n's error handling to manage API failures
-- **Batching**: Process files in batches to avoid overwhelming the API
-- **Caching**: Store results in n8n's data storage to avoid repeated API calls
-- **Security**: Keep your API key secure in n8n's credential system
-
-## Security Considerations
-
-- **API Key**: Always use a strong, unique API key in production
-- **HTTPS**: Enable HTTPS in production environments
-- **File Access**: The API can read and modify files on the server - ensure proper access controls
-- **Input Validation**: Validate file paths to prevent directory traversal attacks
+Best practices:
+- Handle errors using n8n error handling
+- Batch processing to avoid overwhelming the API
+- Cache results to reduce repeated calls
+- Store API key in n8n credentials
+- For simple automations, consider CLI mode (no server startup required)
 
 ## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License. See `LICENSE`.
 
 ## Contributing
+- Fork and open a PR. For major changes, open an issue first.
 
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
-### Development Setup
-
-1. Clone the repository
-2. Open in Visual Studio 2022 or VS Code
-3. Restore NuGet packages: `dotnet restore`
-4. Set your API key in `appsettings.Development.json`
-5. Run the project: `dotnet run`
-
-### Submitting Changes
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Development setup:
+1) Clone the repository
+2) Open in Visual Studio 2022 or VS Code
+3) `dotnet restore`
+4) Set API key in `appsettings.Development.json`
+5) `dotnet run`
 
 ## Support
-
-If you have questions or need help:
-
-- Open an issue on GitHub for bugs or feature requests
-- Check the existing issues before creating a new one
-- For n8n integration questions, refer to the n8n Integration section above
+- Open a GitHub issue for bugs or feature requests
+- Check existing issues before creating a new one
+- For n8n integration questions, see the n8n section above
 
 ## Acknowledgments
-
-- Built with [Roslyn](https://github.com/dotnet/roslyn) - Microsoft's C# compiler platform
-- Designed for [n8n](https://n8n.io/) workflow automation
+- Built with Roslyn (https://github.com/dotnet/roslyn)
+- Designed for n8n (https://n8n.io/)
 - Uses ASP.NET Core minimal APIs

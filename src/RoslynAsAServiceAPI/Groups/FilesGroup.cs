@@ -18,7 +18,7 @@ namespace RoslynAsAServiceAPI.Groups
             apiGroup.MapPost("/create-file", CreateFile).WithTags("File System");
         }
 
-        private static async Task<IResult> CreateFile([FromBody] CreateFileCommand command)
+        public static async Task<IResult> CreateFile([FromBody] CreateFileCommand command)
         {
             try
             {
@@ -31,7 +31,7 @@ namespace RoslynAsAServiceAPI.Groups
             }
         }
 
-        private static async Task<IResult> InsertText([FromBody] InsertTextCommand command)
+        public static async Task<IResult> InsertText([FromBody] InsertTextCommand command)
         {
             if (!File.Exists(command.FilePath))
             {
@@ -55,7 +55,7 @@ namespace RoslynAsAServiceAPI.Groups
             }
         }
 
-        private static async Task<IResult> ReplaceText([FromBody] ReplaceTextCommand command)
+        public static async Task<IResult> ReplaceText([FromBody] ReplaceTextCommand command)
         {
             if (!File.Exists(command.FilePath))
             {
@@ -75,7 +75,7 @@ namespace RoslynAsAServiceAPI.Groups
             }
         }
 
-        private static Task<IResult> FindFiles([FromBody] FindFilesQuery query)
+        public static Task<IResult> FindFiles([FromBody] FindFilesQuery query)
         {
             if (!Directory.Exists(query.Path))
             {
