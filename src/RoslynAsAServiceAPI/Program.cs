@@ -31,6 +31,7 @@ namespace RoslynAsAServiceAPI
             app.UseAuthorization();
 
             app.MapRoslynApi();
+            app.MapFilesApi();
 
             app.Run();
         }
